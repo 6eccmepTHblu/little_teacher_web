@@ -38,6 +38,8 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
     async function addWord(word) {
         try {
             const response = await wordStore.wordSelected(word.id, true)
+            const response2 = await wordStore.wordRepetition(word.id, 0)
+            response.repetition_count = 0
             if (response.selected) {
                 words.value.push(response)
                 if (words.value.length === 1) { // Если это первое слово
@@ -67,19 +69,11 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
 
     // Обновление счетчика повторений
     const updateWordRepetition = async (wordId, newCount) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/words/${wordId}`, {
-                method: 'PATCH',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({repetition_count: newCount})
-            })
-            if (response.ok) {
-                // Обновляем локальное состояние
-                const word = words.value.find(w => w.id === wordId)
-                if (word) word.repetition_count = newCount
-            }
-        } catch (error) {
-            console.error('Error updating repetition count:', error)
+        const response = await wordStore.wordRepetition(wordId, newCount)
+        if (response) {
+            // Обновляем локальное состояние
+            const word = words.value.find(w => w.id === wordId)
+            if (word) word.repetition_count = newCount
         }
     }
 
@@ -169,8 +163,19 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
 
             const selectedWords = await response.json();
 
-            // Обновляем локальный список слов
-            words.value = [...words.value, ...selectedWords];
+            // Сбрасываем счетчик повторений для каждого слова на сервере
+            await Promise.all(selectedWords.map(word =>
+                wordStore.wordRepetition(word.id, 0)
+            ));
+
+            // Обновляем локальное состояние
+            const wordsWithResetCount = selectedWords.map(word => ({
+                ...word,
+                repetition_count: 0,
+            }));
+
+            // Обновляем локальный список слов уже со сброшенными счетчиками
+            words.value = [...words.value, ...wordsWithResetCount];
 
             // Если список был пуст, получаем следующее слово
             if (words.value.length === selectedWords.length) {

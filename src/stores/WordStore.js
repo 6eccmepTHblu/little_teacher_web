@@ -29,7 +29,12 @@ export const useWordStore = defineStore('word', () => {
         return await updateWord(wordID, {selected: isSelected});
     }
 
+    const wordRepetition = async (wordID, newCount) => {
+        return await updateWord(wordID, {repetition_count: newCount});
+    }
+
     return {
-        wordSelected
+        wordSelected,
+        wordRepetition
     }
 })
