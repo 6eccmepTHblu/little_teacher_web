@@ -11,7 +11,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="bg-white rounded-lg shadow-md p-4">
+  <div class="bg-white rounded-lg shadow-md p-2">
     <h3 class="text-xl font-semibold text-gray-800 mb-4">Слова для практики</h3>
     <TransitionGroup name="list" tag="ul" class="list-none p-0">
       <li v-for="word in vocabularyStore.words" :key="word.id" class="mb-4">

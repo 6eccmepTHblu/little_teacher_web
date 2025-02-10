@@ -55,9 +55,7 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
             if (!response.selected) {
                 words.value = words.value.filter((word) => word.id !== id)
             }
-            if (words.value.length > 0) { // Если это первое слово
-                getNextWord()
-            }
+            getNextWord()
         } catch (error) {
             console.error('Error deleting word:', error)
         }
@@ -102,7 +100,11 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
 
     // Получение следующего слова
     const getNextWord = () => {
-        if (words.value.length === 0) return null
+        if (words.value.length === 0) {
+            currentWord.value = null
+            showTranslation.value = false
+            return null
+        }
 
         // Получаем слова с минимальным количеством повторений
         const minRepetitions = Math.min(...words.value.map(w => w.repetition_count))
@@ -119,12 +121,67 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
         return {
             word: currentWord.value.english,
             translation: showTranslation.value ? currentWord.value.translations.map(t => t.russian).join('; ') : '',
-            transcription: currentWord.value.transcription
+            transcription: currentWord.value.transcription,
+            repetitionCount: currentWord.value.repetition_count
         }
     })
 
     function resetShowTranslation() {
         showTranslation.value = false
+    }
+
+    const clearAllWords = async () => {
+        try {
+            // Отправляем запрос на сервер для обновления статуса всех слов
+            const response = await fetch(`${API_BASE_URL}/words/clear-selected`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`)
+            }
+
+            // Очищаем локальный список слов
+            words.value = []
+            currentWord.value = null
+            showTranslation.value = false
+        } catch (error) {
+            console.error('Error clearing all words:', error)
+        }
+    }
+
+    const selectWords = async (wordIds) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/words/select-words`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(wordIds)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const selectedWords = await response.json();
+
+            // Обновляем локальный список слов
+            words.value = [...words.value, ...selectedWords];
+
+            // Если список был пуст, получаем следующее слово
+            if (words.value.length === selectedWords.length) {
+                getNextWord();
+            }
+
+            return selectedWords;
+        } catch (error) {
+            console.error('Error selecting words:', error);
+            throw error;
+        }
     }
 
     return {
@@ -141,7 +198,9 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
         currentWordDisplay,
         showTranslation,
         resetShowTranslation,
-        updateWordRepetition
+        updateWordRepetition,
+        clearAllWords,
+        selectWords
     }
 
 })
