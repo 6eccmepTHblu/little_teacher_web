@@ -17,5 +17,4 @@ import PracticeWordList from "@/components/PracticeWordList.vue";
 </template>
 
 <style scoped>
-
 </style>
